@@ -3,8 +3,7 @@ from dotenv import find_dotenv, load_dotenv
 import time
 import streamlit as st
 
-load_dotenv()
-client = openai.OpenAI()
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 model = "gpt-4"
 
 # Adjust font size for streamlit
