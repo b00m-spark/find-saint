@@ -1,5 +1,4 @@
 import openai
-import time
 import streamlit as st
 
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -33,39 +32,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-def get_response(client, thread_id):
-    messages = client.beta.threads.messages.list(
-        thread_id = thread_id
-    )
-    summary = []
-            
-    # Get the latest message
-    last_message = messages.data[0]
-    role = last_message.role
-    response = last_message.content[0].text.value
-
-    # Append its response to the summary list
-    summary.append(response)
-    summary = "\n".join(summary)
-
-    return summary
-
-def wait_for_completion(client, thread_id, run_id):
-    while True:
-        time.sleep(5)
-        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
-        print(f"RUN STATUS: {run.status}")
-        #print(f"RUN STATUS: {run_status.model_dump_json(indent=4)}")
-
-        if run.status == "completed":
-            response = get_response(client, thread_id)
-            if response and client.beta.threads.messages.list(
-                thread_id=thread_id
-            ).data[0].role == "assistant":
-                return response  
-        elif run.status == "failed":
-            print("RUN FAILED")
-            break 
 
 def createInstruction(gender, career, themes, challenges, devotion, popularity, additional):
     instruction = f"Recommend to the user 5-10 catholic patron saints of {gender} gender based on their preferences and personal info below."
@@ -126,42 +92,26 @@ def main():
         horizontal= True
     )
 
-    additional = st.text_input("**Are there any other information you'd like to add?** (Where are you from? Do you have personal stories that are important to you? Have you already found some saints you like? ...)", max_chars=300)
+    additional = st.text_input("**Is there any other information you'd like to add?** (Where are you from? Do you have personal stories that are important to you? Do you want your saint to be an earlier/more recent figure? Have you already found some saints you like? ...)", max_chars=300)
 
     instructions = createInstruction(gender, career, chosen, challenges, devotion, popularity, additional)
 
     if st.button("Go!"):
-        # Create assistant
-        assis = client.beta.assistants.create(
-            name="Patron-saint-finder",
-            instructions="You help people find their catholic patron saints",
-            model=model
+        response = client.responses.create(
+            model=model,
+            input=[
+                {
+                    "role": "system",
+                    "content": "You help people find their Catholic patron saints."
+                },
+                {
+                    "role": "user",
+                    "content": instructions
+                }
+            ]
         )
-        assistant_id = assis.id
-        print("\nCREATED ASSISTANT\n")
-    
-        # Create thread
-        thread = client.beta.threads.create()
-        thread_id = thread.id
-        print("\nCREATED THREAD\n")
-
-        # Add message
-        client.beta.threads.messages.create(
-            thread_id = thread.id,
-            role = "user",
-            content = instructions
-        )
-        print("\nADDED MESSAGE\n")
-
-        # Run assistant
-        run = client.beta.threads.runs.create(
-            thread_id = thread.id,
-            assistant_id = assis.id
-       )
-        print("\nRUN THREAD\n")
-
-        response = wait_for_completion(client, thread_id, run.id)
-        st.write(response)
+        output_text = response.output_text
+        st.write(output_text)
         st.write("** This is only a suggestion and may contain errors. Please use it as a starting point, not a final answer — pray, discern, and feel free to choose any saint who might not be on this list that speaks to your heart ✨")
 
 
