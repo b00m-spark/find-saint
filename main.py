@@ -1,5 +1,22 @@
 import openai
 import streamlit as st
+import json
+
+if "requests_today" not in st.session_state:
+    st.session_state.requests_today = 0
+
+SESSION_LIMIT = 3
+
+def load_stats():
+    try:
+        with open("visits.json", "r") as f:
+            return json.load(f)
+    except:
+        return {"visits": 0, "responses": 0}
+
+def save_stats(data):
+    with open("visits.json", "w") as f:
+        json.dump(data, f)
 
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 model = "gpt-4"
@@ -51,6 +68,13 @@ def createInstruction(gender, career, themes, challenges, devotion, popularity, 
     return instruction
 
 def main():
+    # Update visit stats
+    stats = load_stats()
+
+    if "counted_visit" not in st.session_state:
+        stats["visits"] += 1
+        save_stats(stats)
+        st.session_state.counted_visit = True
 
     st.title("Find your patron saint!")
 
@@ -97,6 +121,9 @@ def main():
     instructions = createInstruction(gender, career, chosen, challenges, devotion, popularity, additional)
 
     if st.button("Go!"):
+        if st.session_state.requests_today >= SESSION_LIMIT:
+            st.error("You’ve reached the daily limit for this session 🙏 Please try again later.")
+            st.stop()
         response = client.responses.create(
             model=model,
             input=[
@@ -113,7 +140,12 @@ def main():
         output_text = response.output_text
         st.write(output_text)
         st.write("** This is only a suggestion and may contain errors. Please use it as a starting point, not a final answer — pray, discern, and feel free to choose any saint who might not be on this list that speaks to your heart ✨")
-
+        
+        # Update request stats
+        st.session_state.requests_today += 1
+        stats = load_stats()
+        stats["responses"] += 1
+        save_stats(stats)
 
 if __name__ == "__main__":
     main()
