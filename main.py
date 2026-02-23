@@ -1,9 +1,6 @@
 import openai
-import os
 from dotenv import find_dotenv, load_dotenv
 import time
-import requests
-import json
 import streamlit as st
 
 load_dotenv()
@@ -167,6 +164,7 @@ def main():
 
         response = wait_for_completion(client, thread_id, run.id)
         st.write(response)
+        st.write("** This is only a suggestion and may contain errors. Please use it as a starting point, not a final answer — pray, discern, and feel free to choose any saint who might not be on this list that speaks to your heart ✨")
 
 
 if __name__ == "__main__":
